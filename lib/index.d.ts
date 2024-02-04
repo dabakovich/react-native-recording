@@ -4,10 +4,14 @@ interface options {
     bitsPerChannel: 8 | 16;
     channelsPerFrame: 1 | 2;
 }
+interface IAudioBuffer {
+    data: number[],
+    timestamp: number,
+}
 declare const _default: {
     init: (options: options) => any;
     start: () => any;
     stop: () => any;
-    addRecordingEventListener: (listener: (data: Float32Array) => void) => import("react-native").EmitterSubscription;
+    addRecordingEventListener: (listener: (buffer: IAudioBuffer) => void) => import("react-native").EmitterSubscription;
 };
 export default _default;
