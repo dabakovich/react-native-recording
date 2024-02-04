@@ -50,10 +50,23 @@ RCT_EXPORT_METHOD(stop) {
 - (void)processInputBuffer:(AudioQueueBufferRef)inBuffer queue:(AudioQueueRef)queue {
     SInt16 *audioData = inBuffer->mAudioData;
     UInt32 count = inBuffer->mAudioDataByteSize / sizeof(SInt16);
-    for (int i = 0; i < _bufferSize; i++) {
-        _audioData[i] = @(audioData[i]);
+    NSMutableArray *audioArray = [NSMutableArray arrayWithCapacity:_bufferSize];
+    for (int i = 0; i < count; i++) {
+        [audioArray addObject:@(audioData[i])];
     }
-    [self sendEventWithName:@"recording" body:[NSArray arrayWithObjects:_audioData count:count]];
+
+    // Getting current timestamp
+    NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
+
+    // Creating the event payload
+    NSDictionary *eventPayload = @{
+        @"data": audioArray,
+        @"timestamp": @(timestamp)
+    };
+
+    // Sending the event
+    [self sendEventWithName:@"recording" body:eventPayload];
+
     AudioQueueEnqueueBuffer(queue, inBuffer, 0, NULL);
 }
 

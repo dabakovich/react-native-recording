@@ -1,5 +1,6 @@
 package cn.qiuxiang.react.recording;
 
+import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -10,6 +11,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 class RecordingModule extends ReactContextBaseJavaModule {
@@ -30,6 +32,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
         return "Recording";
     }
 
+    @SuppressLint("MissingPermission")
     @ReactMethod
     public void init(ReadableMap options) {
         if (eventEmitter == null) {
@@ -113,14 +116,31 @@ class RecordingModule extends ReactContextBaseJavaModule {
     }
 
     private void recording() {
-        short buffer[] = new short[bufferSize];
+        short[] buffer = new short[bufferSize];
         while (running && !reactContext.getCatalystInstance().isDestroyed()) {
-            WritableArray data = Arguments.createArray();
+
             audioRecord.read(buffer, 0, bufferSize);
+            long currentTime = System.currentTimeMillis();
+
+            WritableArray data = Arguments.createArray();
             for (float value : buffer) {
                 data.pushInt((int) value);
             }
-            eventEmitter.emit("recording", data);
+
+            WritableMap record = Arguments.createMap();
+            record.putArray("data", data);
+            record.putDouble("timestamp", currentTime);
+
+            eventEmitter.emit("recording", record);
         }
+    }
+
+    // Required for rn built in EventEmitter Calls.
+    @ReactMethod
+    public void addListener(String eventName) {
+    }
+
+    @ReactMethod
+    public void removeListeners(Integer count) {
     }
 }
