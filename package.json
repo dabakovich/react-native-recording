@@ -1,8 +1,8 @@
 {
   "name": "react-native-recording",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "React Native audio recording module used for DSP",
-  "author": "Qiu Xiang <i@7c00.cc>",
+  "author": "David Tabaka <dabakovich@gmail.com>",
   "license": "MIT",
   "keywords": [
     "react-native",
@@ -11,14 +11,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/qiuxiang/react-native-recording"
+    "url": "https://github.com/dabakovich/react-native-recording"
   },
   "files": [
     "lib/index.js",
     "lib/android/src",
     "lib/android/build.gradle",
     "lib/ios",
-    "react-native.config.js"
+    "react-native.config.js",
+    "react-native-recording.podspec"
   ],
   "main": "lib",
   "types": "lib/index.d.ts",
