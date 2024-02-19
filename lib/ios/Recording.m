@@ -5,6 +5,8 @@
     AudioQueueBufferRef _buffer;
     NSNumber *_audioData[65536];
     UInt32 _bufferSize;
+    double _sampleRate;
+    NSTimeInterval _startRecordingTimestamp;
 }
 
 void inputCallback(
@@ -14,7 +16,7 @@ void inputCallback(
         const AudioTimeStamp *inStartTime,
         UInt32 inNumberPacketDescriptions,
         const AudioStreamPacketDescription *inPacketDescs) {
-    [(__bridge Recording *) inUserData processInputBuffer:inBuffer queue:inAQ];
+    [(__bridge Recording *) inUserData processInputBuffer:inBuffer queue:inAQ sampleTime:inStartTime->mSampleTime];
 }
 
 RCT_EXPORT_MODULE()
@@ -34,6 +36,8 @@ RCT_EXPORT_METHOD(init:(NSDictionary *) options) {
     description.mFormatID = kAudioFormatLinearPCM;
     description.mFormatFlags = kAudioFormatFlagIsSignedInteger;
 
+    _sampleRate = description.mSampleRate;
+
     AudioQueueNewInput(&description, inputCallback, (__bridge void *) self, NULL, NULL, 0, &_queue);
     AudioQueueAllocateBuffer(_queue, (UInt32) (bufferSize * 2), &_buffer);
     AudioQueueEnqueueBuffer(_queue, _buffer, 0, NULL);
@@ -41,22 +45,27 @@ RCT_EXPORT_METHOD(init:(NSDictionary *) options) {
 
 RCT_EXPORT_METHOD(start) {
     AudioQueueStart(_queue, NULL);
+    
+    NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
+    _startRecordingTimestamp = timestamp;
 }
 
 RCT_EXPORT_METHOD(stop) {
     AudioQueueStop(_queue, YES);
+    _startRecordingTimestamp = 0;
 }
 
-- (void)processInputBuffer:(AudioQueueBufferRef)inBuffer queue:(AudioQueueRef)queue {
+- (void)processInputBuffer:(AudioQueueBufferRef)inBuffer queue:(AudioQueueRef)queue sampleTime:(Float64)sampleTime {
+    Float64 durationFromStart = 1000 * sampleTime / _sampleRate; // milliseconds
+
+    NSTimeInterval timestamp = _startRecordingTimestamp + durationFromStart;
+
     SInt16 *audioData = inBuffer->mAudioData;
     UInt32 count = inBuffer->mAudioDataByteSize / sizeof(SInt16);
     NSMutableArray *audioArray = [NSMutableArray arrayWithCapacity:_bufferSize];
     for (int i = 0; i < count; i++) {
         [audioArray addObject:@(audioData[i])];
     }
-
-    // Getting current timestamp
-    NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
 
     // Creating the event payload
     NSDictionary *eventPayload = @{
