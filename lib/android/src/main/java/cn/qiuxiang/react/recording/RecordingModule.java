@@ -96,6 +96,8 @@ class RecordingModule extends ReactContextBaseJavaModule {
                 recording();
             }
         }, "RecordingThread");
+
+        recordingThread.setPriority(Thread.MAX_PRIORITY);
     }
 
     @ReactMethod
