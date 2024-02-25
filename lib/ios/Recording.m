@@ -6,7 +6,8 @@
     NSNumber *_audioData[65536];
     UInt32 _bufferSize;
     double _sampleRate;
-    NSTimeInterval _startRecordingTimestamp;
+    NSTimeInterval _recordingStartTimestamp;
+    NSTimeInterval _recordingStartBootTime;
 }
 
 void inputCallback(
@@ -43,22 +44,28 @@ RCT_EXPORT_METHOD(init:(NSDictionary *) options) {
     AudioQueueEnqueueBuffer(_queue, _buffer, 0, NULL);
 }
 
-RCT_EXPORT_METHOD(start) {
+RCT_EXPORT_METHOD(start:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
     AudioQueueStart(_queue, NULL);
-    
-    NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
-    _startRecordingTimestamp = timestamp;
+
+    _recordingStartTimestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
+    _recordingStartBootTime = [[NSProcessInfo processInfo] systemUptime] * 1000;
+
+    resolve(@{@"recordingStartTimestamp": @(round(_recordingStartTimestamp)), @"recordingStartBootTime": @(round(_recordingStartBootTime))});
 }
 
 RCT_EXPORT_METHOD(stop) {
     AudioQueueStop(_queue, YES);
-    _startRecordingTimestamp = 0;
+    _recordingStartTimestamp = 0;
+    _recordingStartBootTime = 0;
 }
 
 - (void)processInputBuffer:(AudioQueueBufferRef)inBuffer queue:(AudioQueueRef)queue sampleTime:(Float64)sampleTime {
     Float64 durationFromStart = 1000 * sampleTime / _sampleRate; // milliseconds
 
-    NSTimeInterval timestamp = _startRecordingTimestamp + durationFromStart;
+    NSTimeInterval startTimestamp = _recordingStartTimestamp + durationFromStart;
+    NSTimeInterval startBootTime = _recordingStartBootTime + durationFromStart;
 
     SInt16 *audioData = inBuffer->mAudioData;
     UInt32 count = inBuffer->mAudioDataByteSize / sizeof(SInt16);
@@ -67,10 +74,16 @@ RCT_EXPORT_METHOD(stop) {
         [audioArray addObject:@(audioData[i])];
     }
 
+    NSTimeInterval endTimestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
+    NSTimeInterval endBootTime = [[NSProcessInfo processInfo] systemUptime] * 1000;
+
     // Creating the event payload
     NSDictionary *eventPayload = @{
         @"data": audioArray,
-        @"timestamp": @(timestamp)
+        @"startTimestamp": @(round(startTimestamp)),
+        @"startBootTime": @(round(startBootTime)),
+        @"endTimestamp": @(round(endTimestamp)),
+        @"endBootTime": @(round(endBootTime))
     };
 
     // Sending the event

@@ -22,7 +22,6 @@
     "react-native-recording.podspec"
   ],
   "main": "lib",
-  "types": "lib/index.d.ts",
   "scripts": {
     "start": "react-native start",
     "android": "react-native run-android",

@@ -2,23 +2,29 @@ import { NativeModules, NativeEventEmitter } from "react-native";
 const { Recording } = NativeModules;
 const eventEmitter = new NativeEventEmitter(Recording);
 
-interface options {
+interface IInitParams {
   bufferSize: number,
   sampleRate: number,
   bitsPerChannel: 8 | 16,
   channelsPerFrame: 1 | 2,
 }
 
-interface IAudioBuffer {
+export interface IRecordingStartInfo {
+  recordingStartTimestamp: number;
+  recordingStartBootTime: number;
+}
+
+export interface IAudioBuffer {
   data: number[],
-  timestamp: number,
+  startTimestamp: number,
+  endTimestamp: number,
+  bootTimestamp: number,
 }
 
 export default {
-  // TODO: params check
-  init: (options: options) => Recording.init(options),
-  start: () => Recording.start(),
-  stop: () => Recording.stop(),
+  init: (params: IInitParams) => Recording.init(params),
+  start: (): Promise<IRecordingStartInfo> => Recording.start(),
+  stop: Recording.stop,
   addRecordingEventListener: (listener: (buffer: IAudioBuffer) => void) =>
     eventEmitter.addListener("recording", listener),
 };

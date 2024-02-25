@@ -4,8 +4,10 @@ import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.SystemClock;
 
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -97,12 +99,21 @@ class RecordingModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void start() {
+    public void start(final Promise promise) {
+        long recordingStartTimestamp = System.currentTimeMillis();
+        long recordingStartBootTime = SystemClock.elapsedRealtime();
+
         if (!running && audioRecord != null && recordingThread != null) {
             running = true;
             audioRecord.startRecording();
             recordingThread.start();
         }
+
+        // Resolve { recordingStartTimestamp: number, recordingStartBootTime: number }
+        WritableMap recordingStartInfo = Arguments.createMap();
+        recordingStartInfo.putDouble("recordingStartTimestamp", recordingStartTimestamp);
+        recordingStartInfo.putDouble("recordingStartBootTime", recordingStartBootTime);
+        promise.resolve(recordingStartInfo);
     }
 
     @ReactMethod
@@ -118,9 +129,13 @@ class RecordingModule extends ReactContextBaseJavaModule {
     private void recording() {
         short[] buffer = new short[bufferSize];
         while (running && !reactContext.getCatalystInstance().isDestroyed()) {
+            long startTimestamp = System.currentTimeMillis();
+            long startBootTime = SystemClock.elapsedRealtime();
 
             audioRecord.read(buffer, 0, bufferSize);
-            long currentTime = System.currentTimeMillis();
+
+            long endTimestamp = System.currentTimeMillis();
+            long endBootTime = SystemClock.elapsedRealtime();
 
             WritableArray data = Arguments.createArray();
             for (float value : buffer) {
@@ -129,7 +144,11 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
             WritableMap record = Arguments.createMap();
             record.putArray("data", data);
-            record.putDouble("timestamp", currentTime);
+
+            record.putDouble("startTimestamp", startTimestamp);
+            record.putDouble("startBootTime", startBootTime);
+            record.putDouble("endTimestamp", endTimestamp);
+            record.putDouble("endBootTime", endBootTime);
 
             eventEmitter.emit("recording", record);
         }
