@@ -17,8 +17,9 @@ export interface IRecordingStartInfo {
 export interface IAudioBuffer {
   data: number[],
   startTimestamp: number,
+  startBootTime: number,
   endTimestamp: number,
-  bootTimestamp: number,
+  endBootTime: number,
 }
 
 export default {
