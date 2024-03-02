@@ -3,6 +3,7 @@ package cn.qiuxiang.react.recording;
 import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
+import android.media.AudioTimestamp;
 import android.media.MediaRecorder;
 import android.os.SystemClock;
 
@@ -21,8 +22,11 @@ class RecordingModule extends ReactContextBaseJavaModule {
     private final ReactApplicationContext reactContext;
     private DeviceEventManagerModule.RCTDeviceEventEmitter eventEmitter;
     private boolean running;
+    private int sampleRate = 44100;
     private int bufferSize;
     private Thread recordingThread;
+    private long recordingStartTimestamp;
+    private long recordingStartBootTime;
 
     RecordingModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -53,9 +57,8 @@ class RecordingModule extends ReactContextBaseJavaModule {
         // for parameter description, see
         // https://developer.android.com/reference/android/media/AudioRecord.html
 
-        int sampleRateInHz = 44100;
         if (options.hasKey("sampleRate")) {
-            sampleRateInHz = options.getInt("sampleRate");
+            sampleRate = options.getInt("sampleRate");
         }
 
         int channelConfig = AudioFormat.CHANNEL_IN_MONO;
@@ -79,17 +82,17 @@ class RecordingModule extends ReactContextBaseJavaModule {
         }
 
         if (options.hasKey("bufferSize")) {
-            this.bufferSize = options.getInt("bufferSize");
+            bufferSize = options.getInt("bufferSize");
         } else {
-            this.bufferSize = 8192;
+            bufferSize = 8192;
         }
 
         audioRecord = new AudioRecord(
                 MediaRecorder.AudioSource.MIC,
-                sampleRateInHz,
+                sampleRate,
                 channelConfig,
                 audioFormat,
-                this.bufferSize * 2);
+                bufferSize * 2);
 
         recordingThread = new Thread(new Runnable() {
             public void run() {
@@ -101,21 +104,15 @@ class RecordingModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void start(final Promise promise) {
-        long recordingStartTimestamp = System.currentTimeMillis();
-        long recordingStartBootTime = SystemClock.uptimeMillis();
-
+    public void start() {
         if (!running && audioRecord != null && recordingThread != null) {
+            recordingStartTimestamp = System.currentTimeMillis();
+            recordingStartBootTime = SystemClock.uptimeMillis();
+
             running = true;
             audioRecord.startRecording();
             recordingThread.start();
         }
-
-        // Resolve { recordingStartTimestamp: number, recordingStartBootTime: number }
-        WritableMap recordingStartInfo = Arguments.createMap();
-        recordingStartInfo.putDouble("recordingStartTimestamp", recordingStartTimestamp);
-        recordingStartInfo.putDouble("recordingStartBootTime", recordingStartBootTime);
-        promise.resolve(recordingStartInfo);
     }
 
     @ReactMethod
@@ -130,11 +127,25 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
     private void recording() {
         short[] buffer = new short[bufferSize];
+
+        AudioTimestamp audioTimestamp = new AudioTimestamp();
+        int totalSamplesRead = 0;
+
         while (running && !reactContext.getCatalystInstance().isDestroyed()) {
+            long durationFromStart = 0;
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && audioRecord.getTimestamp(audioTimestamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS) {
+                durationFromStart = 1000L * audioTimestamp.framePosition / sampleRate;
+            } else {
+                durationFromStart = 1000L * totalSamplesRead / sampleRate;
+            }
+
             long startTimestamp = System.currentTimeMillis();
             long startBootTime = SystemClock.uptimeMillis();
+            long calculatedStartTimestamp = recordingStartTimestamp + durationFromStart;
+            long calculatedStartBootTime = recordingStartBootTime + durationFromStart;
 
-            audioRecord.read(buffer, 0, bufferSize);
+            int samplesRead = audioRecord.read(buffer, 0, bufferSize);
 
             long endTimestamp = System.currentTimeMillis();
             long endBootTime = SystemClock.uptimeMillis();
@@ -149,10 +160,14 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
             record.putDouble("startTimestamp", startTimestamp);
             record.putDouble("startBootTime", startBootTime);
+            record.putDouble("calculatedStartTimestamp", calculatedStartTimestamp);
+            record.putDouble("calculatedStartBootTime", calculatedStartBootTime);
             record.putDouble("endTimestamp", endTimestamp);
             record.putDouble("endBootTime", endBootTime);
 
             eventEmitter.emit("recording", record);
+
+            totalSamplesRead += samplesRead;
         }
     }
 

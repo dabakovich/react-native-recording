@@ -82,6 +82,8 @@ RCT_EXPORT_METHOD(stop) {
         @"data": audioArray,
         @"startTimestamp": @(round(startTimestamp)),
         @"startBootTime": @(round(startBootTime)),
+        @"calculatedStartTimestamp": @(round(startTimestamp)),
+        @"calculatedStartBootTime": @(round(startBootTime)),
         @"endTimestamp": @(round(endTimestamp)),
         @"endBootTime": @(round(endBootTime))
     };
