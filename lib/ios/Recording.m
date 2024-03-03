@@ -94,6 +94,12 @@ RCT_EXPORT_METHOD(stop) {
     AudioQueueEnqueueBuffer(queue, inBuffer, 0, NULL);
 }
 
+RCT_EXPORT_METHOD(getUptime:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+{
+  NSTimeInterval uptime = [[NSProcessInfo processInfo] systemUptime] * 1000;
+  resolve(@{@"uptime": @(round(uptime))});
+}
+
 - (NSArray<NSString *> *)supportedEvents {
     return @[@"recording"];
 }

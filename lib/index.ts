@@ -24,6 +24,7 @@ interface IRecording {
   init: (params: IInitParams) => Promise<void>;
   start: () => void;
   stop: () => void;
+  getUptime: () => Promise<{ uptime: number }>;
   addRecordingEventListener: (listener: (buffer: IAudioBuffer) => void) => EmitterSubscription;
 }
 
@@ -31,6 +32,7 @@ export default {
   init: Recording.init,
   start: Recording.start,
   stop: Recording.stop,
+  getUptime: Recording.getUptime,
   addRecordingEventListener: (listener) =>
     eventEmitter.addListener("recording", listener),
 } as IRecording;
