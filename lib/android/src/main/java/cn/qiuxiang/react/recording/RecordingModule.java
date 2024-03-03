@@ -107,7 +107,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
     public void start() {
         if (!running && audioRecord != null && recordingThread != null) {
             recordingStartTimestamp = System.currentTimeMillis();
-            recordingStartBootTime = SystemClock.elapsedRealtime();
+            recordingStartBootTime = getSystemUptime();
 
             running = true;
             audioRecord.startRecording();
@@ -127,13 +127,22 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getUptime(final Promise promise) {
-        long uptime = SystemClock.uptimeMillis();
+        long uptime = getSystemUptime();
         long timestamp = System.currentTimeMillis();
 
         WritableMap response = Arguments.createMap();
         response.putDouble("uptime", uptime);
         response.putDouble("timestamp", timestamp);
         promise.resolve(response);
+    }
+
+    // Required for rn built in EventEmitter Calls.
+    @ReactMethod
+    public void addListener(String eventName) {
+    }
+
+    @ReactMethod
+    public void removeListeners(Integer count) {
     }
 
     private void recording() {
@@ -152,14 +161,14 @@ class RecordingModule extends ReactContextBaseJavaModule {
             }
 
             long startTimestamp = System.currentTimeMillis();
-            long startBootTime = SystemClock.elapsedRealtime();
+            long startBootTime = getSystemUptime();
             long calculatedStartTimestamp = recordingStartTimestamp + durationFromStart;
             long calculatedStartBootTime = recordingStartBootTime + durationFromStart;
 
             int samplesRead = audioRecord.read(buffer, 0, bufferSize);
 
             long endTimestamp = System.currentTimeMillis();
-            long endBootTime = SystemClock.elapsedRealtime();
+            long endBootTime = getSystemUptime();
 
             WritableArray data = Arguments.createArray();
             for (float value : buffer) {
@@ -182,12 +191,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
         }
     }
 
-    // Required for rn built in EventEmitter Calls.
-    @ReactMethod
-    public void addListener(String eventName) {
-    }
-
-    @ReactMethod
-    public void removeListeners(Integer count) {
+    private long getSystemUptime() {
+        return SystemClock.elapsedRealtime();
     }
 }
