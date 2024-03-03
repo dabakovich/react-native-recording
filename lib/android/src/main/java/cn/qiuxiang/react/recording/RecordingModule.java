@@ -127,7 +127,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getUptime(final Promise promise) {
-        long uptime = SystemClock.uptimeMillis();
+        long uptime = SystemClock.elapsedRealtime();
 
         WritableMap response = Arguments.createMap();
         response.putDouble("uptime", uptime);
