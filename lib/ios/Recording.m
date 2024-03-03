@@ -96,8 +96,10 @@ RCT_EXPORT_METHOD(stop) {
 
 RCT_EXPORT_METHOD(getUptime:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
-  NSTimeInterval uptime = [[NSProcessInfo processInfo] systemUptime] * 1000;
-  resolve(@{@"uptime": @(round(uptime))});
+    NSTimeInterval uptime = [[NSProcessInfo processInfo] systemUptime] * 1000;
+    NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970] * 1000; // milliseconds since 1970
+
+    resolve(@{@"uptime": @(round(uptime)), @"timestamp": @(round(timestamp))});
 }
 
 - (NSArray<NSString *> *)supportedEvents {
