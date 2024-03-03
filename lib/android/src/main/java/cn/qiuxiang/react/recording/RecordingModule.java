@@ -107,7 +107,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
     public void start() {
         if (!running && audioRecord != null && recordingThread != null) {
             recordingStartTimestamp = System.currentTimeMillis();
-            recordingStartBootTime = SystemClock.uptimeMillis();
+            recordingStartBootTime = SystemClock.elapsedRealtime();
 
             running = true;
             audioRecord.startRecording();
@@ -141,14 +141,14 @@ class RecordingModule extends ReactContextBaseJavaModule {
             }
 
             long startTimestamp = System.currentTimeMillis();
-            long startBootTime = SystemClock.uptimeMillis();
+            long startBootTime = SystemClock.elapsedRealtime();
             long calculatedStartTimestamp = recordingStartTimestamp + durationFromStart;
             long calculatedStartBootTime = recordingStartBootTime + durationFromStart;
 
             int samplesRead = audioRecord.read(buffer, 0, bufferSize);
 
             long endTimestamp = System.currentTimeMillis();
-            long endBootTime = SystemClock.uptimeMillis();
+            long endBootTime = SystemClock.elapsedRealtime();
 
             WritableArray data = Arguments.createArray();
             for (float value : buffer) {
